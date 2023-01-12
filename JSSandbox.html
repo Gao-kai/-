@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+<body>
+    <script>
+        class SnapshotSandbox {
+            constructor(){
+                this.proxy  = window;
+                this.modifiedPropsMap = {};
+                // 手动激活一次
+                this.active();
+
+            }
+
+            active(){
+                // 一进来保存window对象初始化快照
+                this.windowSnapshot = {};
+                for (const prop in window) {
+                    if (Object.hasOwnProperty.call(window, prop)) {
+                        this.windowSnapshot[prop] = window[prop];
+                    }
+                }
+
+                // 每次激活都去进行一次还原
+                Object.keys(this.modifiedPropsMap).forEach(prop=>{
+                    window[prop] = this.modifiedPropsMap[prop];
+                })
+            }
+
+            deactive(){
+                // 退出之前进行差异diff 保证差异部分
+                for (const prop in window) {
+                    if (Object.hasOwnProperty.call(window, prop)) {
+                        // 如果不相同 那么保存差异
+                        if(window[prop] !== this.windowSnapshot[prop]){
+                            this.modifiedPropsMap[prop] = window[prop];
+                            // 将window还原 保证切换过去是一个纯净的window
+                            window[prop] = this.windowSnapshot[prop];
+                        }
+                    }
+                }
+            }
+        }
+
+        /* 快照沙箱只能用在单个子应用中 */
+        const sandbox = new SnapshotSandbox();
+        // 加载子应用a，此时被激活，进行快照 添加了一个对象obj
+        window.obja = {
+            name:'lilei'
+        }
+        console.log(obja)
+        // 切换到b应用 此时a应用失活 对当前window进行diff 取出差异部分保存到快照沙箱实例上
+        sandbox.deactive();
+        console.log(obja)
+
+        // 又切回到a应用 此时被激活 将之前的差异取出来 放置到初始的window上
+        sandbox.active();
+        console.log(obja)
+
+
+        /* 代理沙箱 */
+        class ProxySandbox {
+            constructor(){
+                let realWindow = window;
+                let proxy = new Proxy({},{
+                    get(target,prop){
+                        return target[prop] || realWindow[prop];
+                    },
+                    set(target, prop, value) {
+                        target[prop] = value;
+                        return true
+                    },
+
+                })
+                this.proxy = proxy;
+            }
+        }
+        const sandbox1 = new ProxySandbox();
+        const sandbox2 = new ProxySandbox();
+
+        window.abc = 100;
+
+        (function(window){
+            // 函数形参window就是proxy对象实例 后续对proxy对象实例的读写就等于在操作目标对象 并且会被拦截
+            window.abc = 200;
+            console.log('sandbox1',window.abc) // sandbox1 200
+        })(sandbox1.proxy);
+
+        (function(window){
+            window.abc = 300;
+            console.log('sandbox2',window.abc) // sandbox2 300
+        })(sandbox2.proxy);
+
+        console.log('全局window',window.abc) // 全局window.abc 100
+
+
+
+    </script>
+</body>
+</html>

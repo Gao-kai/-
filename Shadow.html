@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+<body>
+    <h1>这是外界的H1标签</h1>
+    <div id="shadow-app"></div>
+
+    <script>
+        // 获取影子dom要挂载的真实dom元素对象
+        const shadow = document.getElementById('shadow-app');
+
+        // 基于attachShadow方法创建一个Shadow DOM 并设置模式为不可访问
+        const shadowDom = shadow.attachShadow({mode:'closed'});
+
+        // 向shadow dom上添加标签h1和样式
+        let h1 = document.createElement('h1');
+        h1.innerHTML = '这是shadowDom中的H1标签'
+
+        let style = document.createElement('style');
+        style.textContent = `
+            h1{
+                color:red;
+            }
+        `
+        shadowDom.appendChild(h1);
+        shadowDom.appendChild(style);
+
+        // 如果一旦将h1标签插入到全局 那么样式就会被覆盖 
+        // 所以shadow dom的缺点在于如果子应用没有向body全局挂一些元素的话 那么那么这可以说是真正意义上的样式隔离
+        document.body.appendChild(h1);
+
+    </script>
+</body>
+</html>
